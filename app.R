@@ -8,90 +8,57 @@
 #
 
 library(shiny)
-library(tidyverse)
-library(rsconnect)
 library(ggplot2)
-library (dplyr)
+library(dplyr)
 
-data_url <- "https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module3/data/cleaned-cdc-mortality-1999-2010-2.csv"
+data_url <- paste0("https://raw.githubusercontent.com/fung1091/data608/master/module3/cleaned-cdc-mortality-1999-2010-2.csv")
 data <- read.csv(data_url, stringsAsFactors = FALSE)
-data2010 <- subset(data, Year==2010)
 
+crude_rate <- 100000
 
-cause <- unique(data2010$ICD.Chapter)
-states <- unique(data2010$State)
+nat_cause <- aggregate(cbind(Deaths, Population) ~ ICD.Chapter + Year, data, FUN = sum)
 
-
+nat_cause$NatAvge <- round(nat_cause$Deaths / nat_cause$Population * crude_rate, 4)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
-    titlePanel("Mortality Rate Across All States by Causes"),
+    #Application title
+    titlePanel("Mortality Improvement by State"),
     
     #Dropdown state and cause
     sidebarLayout(
         sidebarPanel(
-            selectInput("cause_name",
-                        label = "Select cause of death:",
-                        choices = 
-                            c("Infectious & parasitic" = "Certain infectious and parasitic diseases"    ,
-                              "Neoplasms" = "Neoplasms",
-                              "Blood & blood-forming & immune mechanism disorders" = "Diseases of the blood and blood-forming organs and certain disorders involving the immune mechanism",
-                              "Endocrine, nutritional & metabolic" = "Endocrine, nutritional and metabolic diseases",
-                              "Mental & behavioural disorders" = "Mental and behavioural disorders",
-                              "Nervous system" = "Diseases of the nervous system",
-                              "Ear & mastoid process" = "Diseases of the ear and mastoid process",
-                              "Circulatory system"  = "Diseases of the circulatory system",
-                              "Respiratory system" = "Diseases of the respiratory system",
-                              "Digestive system" = "Diseases of the digestive system",
-                              "Skin & subcutaneous tissue" = "Diseases of the skin and subcutaneous tissue",
-                              "Musculoskeletal system & connective tissue" = "Diseases of the musculoskeletal system and connective tissue",
-                              "Genitourinary system" = "Diseases of the genitourinary system",
-                              "Pregnancy, childbirth & the puerperium" = "Pregnancy, childbirth and the puerperium",
-                              "Conditions originating in the perinatal period" = "Certain conditions originating in the perinatal period",
-                              "Congenital malformations, deformations & chromosomal abnormalities" = "Congenital malformations, deformations and chromosomal abnormalities",
-                              "Symptoms, signs & abnormal clinical & laboratory findings, not classified" = "Symptoms, signs and abnormal clinical and laboratory findings, not elsewhere classified",
-                              "External causes of morbidity & mortality" = "External causes of morbidity and mortality"),
-                        selected = 'Neoplasms'
-            )
+            selectInput("state_name", "State:", choices = unique(data$State)),
+            selectInput("causes", "Select type of disease - cause of Death:",
+                         choices = unique(data$ICD.Chapter))
         ),
-        
         # Show a plot of the generated distribution
-        mainPanel(
-            plotOutput("barplot"),
-            br(),br(),
-            tableOutput("results")
-        )
+        mainPanel(plotOutput("State_graph"))
     )
 )
-
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    cause1 <- reactive({
-        df <- subset(data2010, data2010$ICD.Chapter==input$cause_name) %>%
-            arrange(Crude.Rate)
-        
+    sub_data <- reactive({subset(
+        filter(data, ICD.Chapter == input$causes & State == input$state_name),
+        select = c(Year, Crude.Rate, ICD.Chapter)
+    )})
+    
+    new_df <- reactive({
+        df <- sub_data()
+        colnames(df) <- c("Year", "Rate_State", "ICD.Chapter")
+        merge(df, nat_cause, by=c("Year", "ICD.Chapter")) %>%
+            mutate(state_diff = lag(Rate_State) - Rate_State) %>%
+            mutate(nat_diff = lag(NatAvge) - NatAvge) %>%
+            mutate(st_nat = (state_diff - nat_diff))
     })
     
-    output$barplot <- renderPlot({
-        ggplot(cause1(), aes(x = reorder(State, Crude.Rate), y = Crude.Rate, colour = Crude.Rate)) + 
-            geom_point(stat="identity", position=position_dodge(), size=5) +
-            coord_flip() + 
-            geom_text(aes(x= State, y=0, ymax = Crude.Rate,
-                          label = State, hjust = 1, vjust = 0.4)) + 
-            scale_x_discrete(breaks = NULL) +
-            xlab("State") +
-            ylab("Crude Mortality Rate") + 
-            theme(axis.text.y = element_text(angle = 90, size=8, vjust = 0.35))
-        
-        
-    }, height = 800)
-    
+    output$State_graph <- renderPlot({
+        ggplot(data=new_df(), aes(x=Year, y=st_nat)) + geom_line(col = "red", lwd = 1) + ylab("State Crude Rate")
+    })
 }
-    
-
 
 # Run the application 
 shinyApp(ui = ui, server = server)
