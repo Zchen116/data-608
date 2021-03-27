@@ -1,0 +1,86 @@
+---
+title: "DATA 608 Final Project Proposal"
+author: "Zhi Ying Chen"
+date: "03/26/2020"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_collapsed: yes
+    toc_float: yes
+  rmdformats::readthedown:
+    code_folding: hide
+    df_print: paged
+    highlight: tango
+    number_sections: no
+    smooth_scroll: yes
+    theme: united
+    toc_collapsed: yes
+    toc_depth: 5
+    toc_float: yes
+  pdf_document:
+    extra_dependencies:
+    - geometry
+    - multicol
+    - multirow
+  word_document:
+    toc: yes
+    toc_depth: '5'
+theme: lumen
+number_sections: yes
+toc_depth: 3
+---
+
+# 1 Final Project Proposal Requirement
+Your final project is to create a public visualization using data relevant to a current policy, business, or justice issue. You may use any dataset you can find for this assignment, as long as it is either public or you have permission from the data’s owner/administrator to work with it and share it.
+
+Recommended data sources are: governmental data, data provided by a non-profit/Nongovernmental organizations, and data available from large, semi-structured data sets (ie social networks, company financials, etc).
+
+You must document each step of your data analysis process (excluding data acquisition) in code: this will include changing the format of the data and the creation of any images or interactive displays that are made.
+
+You must also include a short (2-3 paragraph) write-up on the visualization. This write-up must include the following: the data source, what the parameters of the data set are (geography, timeframe, what the data points are, etc) what the data shows, and why it is important.
+
+# 2 Introduction
+In this project, we are going to build out a interative visualization using shiny app for New York City Leading Causes of Death by using New York Open Data dataset, which can be found at [https://data.cityofnewyork.us/Health/New-York-City-Leading-Causes-of-Death/jb7j-dtam]. The dataset contains information about the leading causes of death by sex and ethnicity in New York City in since 2007. Cause of death is derived from the NYC death certificate which is issued for every death that occurs in New York City. The dataset includes Year, Leading Cause, Sex, Ethnicity, the number of Deaths, Death Rate, and Age Adjusted Death Rate for all over 1500 cause of death in New York city from 2007 to 2017, last updated on December 16, 2020. 
+
+# Load Library
+```{r}
+library(tidyverse)
+library(dplyr)
+library(shiny)
+set.seed(0)
+```
+
+# Dataset
+
+We can take a look at the dataset in both long format and wide format below.
+
+Load the dataset
+```{r}
+df <- read.csv("https://raw.githubusercontent.com/Zchen116/data-608/main/New_York_City_Leading_Causes_of_Death.csv")
+head(df, 5)
+```
+
+Here is a glimpse of the dataset.
+```{r}
+glimpse(df)
+```
+
+# 3 Aim
+a, Use of visualization to conduct visual analytics on data analysis
+
+b, Provide answer and question to get the result of analysis
+
+c, Provide user-friendly interface to explore the data as well as find insights from it
+
+
+
+# 4 Design Steps for Analysis and Visualization
+Step 1: I will first import the dataset from GitHub, clean the datasets, and perform data exploration. Statistical exploration such as distributions of cause of death will be included.
+
+Step 2: I will do data cleaning, transform and/or combine the datasets for further analysis. 
+
+Step 3: I will create shiny app to show the viewers in comparing deaths by leading cause, year, sex, and race ethnicity.
+
+
+
