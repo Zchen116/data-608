@@ -1,0 +1,156 @@
+<html>
+<head>
+<title>Assignment 5</title>
+<style>
+table 		{border-collapse: collapse;}
+table, td	{border: 1px solid grey;}
+td 			{
+				padding: 5px;
+				text-align: center;
+			}
+td:hover 	{background-color: #f5f5f5;}
+</style>
+</head>
+<body>
+<h1>DATA 608 Assignment 5</h1>
+<h1>Zhi Ying Chen</h1>
+<h2>Beginner Task 1</h2>
+<p>Create a function to reverse any word that you type in.</p>
+<script type="text/javascript">
+
+// Reverse inputted text
+function reverseText(word){
+	var i, rw="";
+	var len = word.length;
+	for (i = len-1; i >= 0; i--) {
+		rw=rw+word[i];
+	}
+	return(rw);
+}
+function reverse(){
+	var r = document.getElementById("wordReverse");
+	r.innerHTML=reverseText(document.getElementById("word").value);
+}
+</script>
+<p>
+<form>
+    <input id="word" type="text">
+    <input type="button" value="Reverse Text" onClick="reverse();">
+</form>
+</p>
+Reversed text: <b id="wordReverse"></b>
+
+
+
+
+
+
+<h2>Beginner Task 2</h2>
+<p>Create a function that takes an input number, and prints a table with the first 20 multiples of the number, in order 5x4.</p>
+<script type="text/javascript">
+// Generate table of 20 multiples given numeric input 
+function mult(){
+	var i, j, s;
+	var t = document.getElementById("targetTable");
+	var n = document.getElementById("num").value;
+	s = "<b>Table of First 20 Multiples of "+n+":</b><br><table>";
+
+	for (i = 1; i <= 5; i++) {
+		s=s+"<tr>"
+		for (j = 1; j <= 4; j++) {
+			s=s+"<td>"+(n*((i-1)*4+j))+"</td>";
+		}
+		s=s+"</tr>"
+	}
+	t.innerHTML = s+"</table>";
+}
+</script>
+<p>
+<form>
+    <input id="num" type="number" size="4">
+    <input type="button" value="Generate Multiples" onClick="mult();">
+</form>
+</p>
+<div id="targetTable"></div>
+
+
+
+
+<h2>Intermediate Task</h2>
+<title>DATA 608 Assignment 5 Question 2</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<link rel="stylesheet" type="text/css" href="hw5.css" />
+<script>
+$(document).ready(function(){
+
+	var dfData = "https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module5/data/presidents.csv";
+
+	d3.text(dfData, function(data) {
+		var parsedCSV = d3.csv.parseRows(data);
+
+		d3.select("#presidentsAll")
+			.append("table")
+
+			.selectAll("tr")
+				.data(parsedCSV).enter()
+				.append("tr")
+
+			.selectAll("td")
+				.data(function(d) { return d; }).enter()
+				.append("td")
+				.text(function(d) { return d; });
+	});
+
+	function getPresDetails(){
+		var tableRow = $("td").filter(function() {
+			var rowUpper = $(this).text().toUpperCase();
+			var inputUpper = $("#presidentName").val().toUpperCase();
+			return rowUpper.indexOf(inputUpper) >= 0 && !rowUpper.startsWith("NAME");
+		}).closest("tr");
+
+		var msgHtml = "<table border=1><tr><th>Name</th><th>Height</th><th>Weight</th></tr>";
+
+		tableRow.each(function(){
+			var name = $(this).find('td').eq(0).text();
+			var height = $(this).find('td').eq(1).text();
+			var weight = $(this).find('td').eq(2).text();
+			if(name != "President" && height != "Height" && weight != "Weight"){
+				msgHtml += "<tr><td>" + name + "</td><td>" + height + "</td><td>" + weight + "</td></tr>";
+			}
+		});
+		msgHtml += "</table>";
+		$("#presidentMessage").html(msgHtml);
+		$("#presidentMessage").show();
+	}
+
+	$("#presidentMessage").hide();
+
+	$('#presidentName').keyup(function(){
+		$("#presidentMessage").html("");
+		var presName = $("#presidentName");
+		if(presName && !presName.val().trim() == ""){
+			getPresDetails();
+		}
+	});
+
+});
+
+</script>
+</head>
+<body>
+
+
+<div class="labels">Enter a president name to show the height and weight of the same president here</div>
+<input type="text" id="presidentName" />
+
+<h3>Presidents Filter Result:</h3>
+<table>
+<tr>
+	<td id="presidentsAll"></td>
+	<td id="presidentMessage" class="messageBox" valign="top"></td>
+</tr>
+</table>
+
+</body>
+</html>
