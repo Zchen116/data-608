@@ -1,0 +1,343 @@
+---
+title: "DATA 608 Final Project"
+author: "Zhi Ying Chen"
+date: "05/22/2021"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_collapsed: yes
+    toc_float: yes
+  rmdformats::readthedown:
+    code_folding: hide
+    df_print: paged
+    highlight: tango
+    number_sections: no
+    smooth_scroll: yes
+    theme: united
+    toc_collapsed: yes
+    toc_depth: 5
+    toc_float: yes
+  pdf_document:
+    extra_dependencies:
+    - geometry
+    - multicol
+    - multirow
+  word_document:
+    toc: yes
+    toc_depth: '5'
+theme: lumen
+number_sections: yes
+toc_depth: 3
+---
+
+# Introduction
+In this project, I'm going to build out a interative visualization using shiny app for New York City Leading Causes of Death by using New York Open Data dataset, which can be found at [https://data.cityofnewyork.us/Health/New-York-City-Leading-Causes-of-Death/jb7j-dtam]. The dataset contains information about the leading causes of death by sex and ethnicity in New York City in since 2007. Cause of death is derived from the NYC death certificate which is issued for every death that occurs in New York City. The dataset includes Year, Leading Cause, Sex, Ethnicity, the number of Deaths, Death Rate, and Age Adjusted Death Rate for all over 1500 cause of death in New York city from 2007 to 2017, last updated on December 16, 2020. 
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+library(tidyr)
+library(purrr)
+library(ggthemes)
+library(skimr)
+library(caret)
+library(tidyverse)
+library(Metrics)
+```
+
+# Data Source
+The dataset I use is from the New York City open data dataset, which can be found at [https://data.cityofnewyork.us/Health/New-York-City-Leading-Causes-of-Death/jb7j-dtam]. The dataset contains information about the leading causes of death by sex and ethnicity in New York City in since 2007.
+```{r}
+data <- read.csv("https://raw.githubusercontent.com/Zchen116/data-608/main/New_York_City_Leading_Causes_of_Death.csv", stringsAsFactors = FALSE)
+```
+
+Here is a glimpse of the dataset.
+```{r}
+glimpse(data)
+```
+
+
+take a look at all type of cause of death we ’ll use the unique function
+```{r}
+categories <- unique(data$Leading.Cause) 
+categories
+```
+
+# Feature Plots
+```{r}
+kable(head(data)) %>% 
+  kable_styling(bootstrap_options = "basic")
+```
+
+# Data Type
+
+Before continue working on our data, we’ll need to fix the class of some variables
+```{r}
+str(data)
+```
+
+The data covered years from 2007 to 2017. So The first thing I wanted to do with the data was to look at how the number of deaths were changing each year. This was done using the code below and produced the ggplot graph under the code.
+
+
+```{r}
+NYC_Death <- suppressWarnings(transform(data, Deaths = as.double(Deaths), Death.Rate = as.double(Death.Rate), Age.Adjusted.Death.Rate = as.double(Age.Adjusted.Death.Rate)))
+```
+
+
+```{r}
+skim(NYC_Death)
+```
+
+
+#Total Death per year
+```{r}
+Total <- sum(NYC_Death$Deaths)
+total_death_yr <- NYC_Death %>% 
+  group_by(ï..Year) %>%  
+  summarise(Total.Deaths = sum(Deaths, na.rm=T), .groups = 'drop')
+
+total_death_yr
+```
+
+
+```{r}
+ggplot(data = total_death_yr, aes(x = ï..Year,y = Total.Deaths)) + 
+  geom_bar(stat = "identity", color="grey", fill=rgb(0.1,0.4,0.5,0.7))+ scale_x_continuous(breaks = total_death_yr$ï..Year)+
+  ggtitle("Number of Deaths per Year") +
+  ylab(label = "Deaths" )
+```
+
+This graph shows the number of deaths went down between 2008 and 2009, then slightly went up after 2013.
+
+
+#Total Death per Year by Sex
+```{r}
+total_death_yr_sex <- NYC_Death %>% 
+  group_by(ï..Year, Sex) %>%  
+  summarise(Total.Deaths = sum(Deaths, na.rm=T), .groups = 'drop')
+
+total_death_yr_sex
+```
+
+```{r}
+ggplot(data = total_death_yr_sex, aes(x= ï..Year,y=Total.Deaths)) + 
+  geom_bar(aes(fill = Sex), position ="dodge",stat = "identity")+
+  ggtitle("Number of Deaths per Year by Sex") +
+  ylab(label = "Deaths" )+ scale_fill_brewer(palette = "Paired")
+```
+
+This graph shows the number of deaths from Female went higher than male between 2008 to 2016, then female and male had the same rate after 2016.
+
+#Total Death per Year by Race
+```{r}
+total_death_yr_race <- NYC_Death %>% 
+  group_by(ï..Year, Race.Ethnicity) %>%  
+  summarise(Total.Deaths = sum(Deaths, na.rm=T), .groups = 'drop')
+
+total_death_yr_race
+```
+
+```{r}
+total_death_yr_race <- NYC_Death %>% 
+  group_by(Race.Ethnicity, Sex) %>%  
+  summarise(Total.Deaths = sum(Deaths, na.rm=T), .groups = 'drop') %>% 
+  filter( Sex == "Male")
+Race_Male <- tidyr::spread(total_death_yr_race, Sex, Total.Deaths)
+```
+
+
+```{r}
+total_death_yr_race <- NYC_Death %>% 
+  group_by(Race.Ethnicity, Sex) %>%  
+  summarise(Total.Deaths = sum(Deaths, na.rm=T), .groups = 'drop') %>% 
+  filter( Sex == "Female")
+Race_Femal <- tidyr::spread(total_death_yr_race, Sex, Total.Deaths)
+```
+
+
+```{r}
+summary_tbl <- left_join(Race_Male, Race_Femal, by = "Race.Ethnicity")
+summary_tbl_total <- mutate(summary_tbl, Total = Male + Female)
+```
+
+
+```{r}
+total_death_yr_race <- NYC_Death %>% 
+  group_by(ï..Year ,Race.Ethnicity, Sex) %>%  
+  summarise(Total.Deaths = sum(Deaths, na.rm=T), .groups = 'drop')
+
+total_death_yr_race
+```
+
+```{r}
+ggplot(data = total_death_yr_race, aes(x= ï..Year,y=Total.Deaths)) + 
+  geom_bar(aes(fill = Race.Ethnicity), position ="dodge",stat = "identity")+
+  ggtitle("Number of Deaths per Year by Race") +
+  ylab(label = "Deaths" )+ scale_fill_brewer(palette = "Set3")
+```
+
+There was more death reported in the Non-Hispanic White population, following by Black Non-Hispanic and Hispanic population. The Asian and Pacific Islanders had the least amount of death toll recorded each year. However, death reported in the Non-Hispanic White population had decreased each year from 2007 to 2017, whereas other ethnic groups seemed to stay about the consistent.
+
+
+# Analysis
+```{r}
+death_per_cause <- NYC_Death %>% group_by(Leading.Cause) %>%  summarise(Total.Deaths = sum(Deaths, na.rm=T), .groups = 'drop') %>%
+arrange(desc(Total.Deaths))
+death_per_cause
+```
+
+```{r}
+top_8 <- head(death_per_cause, 8)
+ggplot(mapping = aes(x = reorder(Leading.Cause, Total.Deaths), y = Total.Deaths), data = top_8) +
+  geom_bar(stat = 'identity') +
+  theme_tufte(base_size = 11, base_family = "serif", ticks = TRUE) +
+  theme(axis.text = element_text(size = 12, face = 'bold')) +
+  coord_flip() +
+  xlab('') +
+  ylab('Total Deaths') +
+  ggtitle("Top 8 Causes of Death")
+```
+
+```{r}
+NYC_Death2 <- select(NYC_Death, ï..Year,Sex, Leading.Cause, Death.Rate, Age.Adjusted.Death.Rate) 
+NYC_Death2 <- transform(NYC_Death2, CauseId=match(Leading.Cause, unique(Leading.Cause)))
+summary(NYC_Death2)
+```
+
+
+split the dataset into training set (80%) and testing set (20%).
+```{r}
+set.seed(100) 
+smp_size <- floor(0.80 * nrow(NYC_Death2))
+train_ind <- sample(seq_len(nrow(NYC_Death2)), size = smp_size)
+train <- NYC_Death2[train_ind, -1]
+test <- NYC_Death2[-train_ind, -1]
+```
+
+```{r}
+dim(train)
+```
+
+```{r}
+dim(test)
+```
+
+```{r}
+# Set 0 equal to NA
+train[train == 0] <- NA
+test[is.na(test)] <- 0
+```
+
+
+```{r}
+# Filter complete cases
+train <- train[complete.cases(train),]
+```
+
+
+# Multiple Regression (Quadratic)
++ **Y** : Age Adjusted Death Rate
++ **X1** : Death Rate
++ **X2** : Leading Cause of Death
+
+```{r}
+X1 <- NYC_Death2$Death.Rate
+X2 <- NYC_Death2$CauseId
+Y <- NYC_Death2$Age.Adjusted.Death.Rate
+
+fit <- lm(Y ~ X1+ X1^2+ X2 + X2^2, data=train)
+summary(fit)
+```
+
+From the summary it can be seen that p-value of the F-statistic is < 2.2e-16, which is highly significant. This means that, at least, one of the predictor variables is significantly related to the outcome variable.
+
+```{r}
+par(mfrow = c(2, 2))
+plot(fit)
+```
+
+From the above plot, the result variable and its covariate Y = β0+β1X+β2X2 do not have a quadratic relationship, but the regression index only allows a linear relationship. Here, the fitted and residual plots show signs of fairly strong linearity in some parts of the data.
+
+```{r}
+rmse <- sqrt(mean(fit$residuals^2))
+
+print(str_c('RMSE of Model Built in Quadratic: ',rmse %>% as.character()))
+```
+
+```{r}
+R.sq <- summary(fit)$adj.r.squared
+R.sq
+```
+
+```{r}
+Quadratic_fit <- cbind(rmse, R.sq)
+Quadratic_fit
+```
+
+# Multiple Regression (Dichotomous)
+
+For this Model we can use sex (Male or Female) as our dichotomous variable
+
++ **Y** : Age Adjusted Death Rate
++ **X3** : Sex
++ **X4** : Leading Cause of Death
+
+```{r}
+NYC_Death2 <- NYC_Death2 %>%  mutate(Gender_mod=case_when(Sex=="Female" ~ 1, Sex=="Male" ~ 0))
+```
+
+```{r}
+X3 <- NYC_Death2$Gender_mod
+X4 <- NYC_Death2$CauseId
+Y <- NYC_Death2$Age.Adjusted.Death.Rate
+
+fit2 <- lm(Y ~ X3+ X4, data=train)
+summary(fit2)
+```
+
+```{r}
+par(mfrow = c(2, 2))
+plot(fit2)
+```
+
+From the above plot, the scatterplot smoother that’s used to construct the red line isn’t doing a good job here, and shows a non-linear fit.It is estimated that the regression equation can predict the pattern of causes of death in New York City between 2007 and 2017. The best predictor is age-adjusted mortality, and age is found to be an important variable in the equation. The biggest challenge of using a multiple regression model is that the model contains many parameters, and it was easy to be overwhelmed by the complexity of the results.
+
+```{r}
+rmse2 <- sqrt(mean(fit2$residuals^2))
+
+print(str_c('RMSE of Model Built in Dichotomous: ',rmse2 %>% as.character()))
+```
+
+```{r}
+R.sq2 <- summary(fit2)$adj.r.squared
+R.sq2
+```
+
+```{r}
+dichotomous_fit <- cbind(rmse2, R.sq2)
+dichotomous_fit
+```
+
+```{r}
+kk = rbind(round(Quadratic_fit, 4), round(dichotomous_fit, 4))
+k1 = as.data.frame(kk)
+rownames(k1) = c("Quadratic", "Dichotomous")
+k1 %>%
+  kable() %>%
+  kable_styling(bootstrap_options = c('striped','bordered'), full_width = FALSE) 
+```
+
+# Shiny app
+
+Shiny app shows the graph and trend of NYC Leading Causes of Death By Race and Sex from 2007 to 2017
+
+# Conclusion
+In the end, I worked through a fair of analysis on this New York City leading causes of death dataset. From this, I've come up with a few conclusions: the death trend of females has a significant impact on the overall trend. The health of females got significant improvement in 2009. Females have more deaths than males and breast cancer is one of the major leading causes of death for females. Black and White have higher health issues/hospitalizations than other races. Also I did RMSE and R.q part analysis for this dataset also. 
+
+RMSE is known as root mean squared error. It is based the assumption that data error follow normal distribution. This is a measure of the average deviation of model predictions from the actual values in the dataset.
+
+R2 is coefficient of determination, scaled between 0 and 1. If R-squared = 1, means the model fits the data perfectly. While both indicate the goodness of the fit, R-squared can be more easily interpreted.
+
+From the result of comparison between Quadratic and Dichotomous, we can know that the result of Quadratic is the better analysis with RMSE = 25.3092, and R.sq = 0.8567.
